@@ -1,7 +1,6 @@
 <?php
 
 require ("../db.conn.php");
-header('Content-Type: application/json');
 
 $json_data = file_get_contents('products.json');
 $data = json_decode($json_data, true);
@@ -70,9 +69,10 @@ $klasor = getcwd();
 $islem = temizleVeSil($klasor);
 
 if ($islem) {
-    echo json_encode(["message" => "Tüm initial değerler başarıyla eklendi ve initial klasörü silindi."]);
+    echo "1";
 } else {
     header("HTTP/1.1 400 Bad Request");
+    header('Content-Type: application/json');
     echo json_encode(["error" => $islem]);
 }
 
