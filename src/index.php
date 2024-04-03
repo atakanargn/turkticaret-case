@@ -95,6 +95,35 @@ if ($request == '/api/v1/') {
         }
         echo json_encode($products);
     }
+} else if ($request == '/api/v1/coupon') {
+    if ($method === "POST") {
+        require_once ('model/coupon.php');
+        $coupon = new Coupon();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $requiredFields = ['coupon_code', 'discount_amount', 'expiration_date'];
+        $missingFields = [];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field])) {
+                $missingFields[] = $field;
+            }
+        }
+        if (empty($missingFields)) {
+            $result = $coupon->create($data['coupon_code'], $data['discount_amount'], $data['expiration_date']);
+            if (isset($result['error'])) {
+                http_response_code(400);
+                echo json_encode(['error' => $result['error']]);
+            } else {
+                http_response_code(201);
+                echo json_encode(['success' => 'Kupon başarıyla oluşturuldu']);
+            }
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Gerekli alanlar eksik', 'missing_fields' => $missingFields]);
+        }
+    } else {
+        http_response_code(405);
+        echo json_encode(['error' => 'Desteklenmeyen HTTP metodu']);
+    }
 } else {
     header("HTTP/1.0 404 Not Found");
     echo json_encode(["error" => "Not found!"]);

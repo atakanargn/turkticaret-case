@@ -28,7 +28,7 @@ CREATE TABLE coupons (
     coupon_code VARCHAR(32) UNIQUE,
     discount_amount NUMERIC(10, 2),
     expiration_date DATE,
-    usage_count INTEGER,
+    usage_count INTEGER DEFAULT 0,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

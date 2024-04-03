@@ -24,10 +24,16 @@ class Product
 
     public function read($id)
     {
-        $sql = "SELECT * FROM products WHERE id = ?";
+        $sql = "SELECT *, json_agg(flavor_notes) AS flavor_notes_json FROM products WHERE id = ? GROUP BY id, title, category_id, category_title, description, price, stock_quantity, origin, roast_level,created_at,updated_at";
         $stmt = $this->_pdo->prepare($sql);
         $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $result['flavor_notes'] = json_decode($result['flavor_notes_json'], true);
+        $result['flavor_notes'] = $result['flavor_notes'][0];
+        unset($result['flavor_notes_json']);
+        return $result;
     }
+
+
 }
 ?>
