@@ -1,0 +1,17 @@
+Proje pure php ile yazıldı gönderdiğiniz döküman içerisindeki tüm detaylara dikkat edilerek yazıldı.
+Veritabanı : Postgresql
+Kullanılan teknolojiler : Docker, Redis, RabbitMQ, 
+
+Kupon Kodu Kontrol Servisi:
+- İstenilen algoritmaya göre Coupon kodu oluşturma ve kontrol servisi eklendi.
+- Sepet kesinleştirildiğinde kupon kodu alınır ve kupon koduna ait indirim uygulanır, kupon kodu tarihi geçti ise bunun için uyarı verir, kupon kodu geçerli ise veritabanından usage_count değerini de artırır.
+
+Sipariş Oluşturma Servisi:
+- Listedeki tüm maddeler yerine getirildi.
+- 3000TL üzeri siparişteki 1 KG kahve kazanma maddesini şu şekilde değerlendirdim; eğer müşteri 3000TL'yi aşar ise tüm ürünler içerisinden stokta bulunanlardan rastgele 1 adet ücretsiz şekilde sepete ekliyor.
+
+Sipariş Düzenleme Servisi:
+- Bunun için redis üzerinde sepet oluşturdum
+- Sepete ürün ekleme/güncelleme/silme işlemleri yapılabiliyor
+- Sepet temizleme işlemi yapılabiliyor
+- Sipariş verildiğinde ise veritabanına işleniyor
