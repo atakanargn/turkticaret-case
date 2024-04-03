@@ -13,18 +13,14 @@ if ($request == '/api/v1/') {
     if ($method === "POST") {
         require_once ('model/customer.php');
         $customer = new Customer();
+
         $data = json_decode(file_get_contents('php://input'), true);
         $requiredFields = ['first_name', 'last_name', 'email', 'password', 'phone_number', 'address'];
-        $missingFields = [];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field])) {
-                $missingFields[] = $field;
-            }
-        }
-        if (empty($missingFields)) {
-            $success = $customer->create($data['first_name'], $data['last_name'], $data['email'], $data['password'], $data['phone_number'], $data['address']);
+        $missingFields = controlRequiredFields($data, $requiredFields);
 
-            if ($success === true) {
+        if ($missingFields === true) {
+            $isSuccess = $customer->create($data['first_name'], $data['last_name'], $data['email'], $data['password'], $data['phone_number'], $data['address']);
+            if ($isSuccess === true) {
                 http_response_code(201);
                 echo json_encode(['message' => 'Müşteri başarıyla oluşturuldu.'], JSON_UNESCAPED_UNICODE);
             } else {
@@ -101,13 +97,9 @@ if ($request == '/api/v1/') {
         $coupon = new Coupon();
         $data = json_decode(file_get_contents('php://input'), true);
         $requiredFields = ['coupon_code', 'discount_amount', 'expiration_date'];
-        $missingFields = [];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field])) {
-                $missingFields[] = $field;
-            }
-        }
-        if (empty($missingFields)) {
+        $missingFields = controlRequiredFields($data, $requiredFields);
+
+        if ($missingFields === true) {
             $result = $coupon->create($data['coupon_code'], $data['discount_amount'], $data['expiration_date']);
             if (isset($result['error'])) {
                 http_response_code(400);
@@ -123,6 +115,123 @@ if ($request == '/api/v1/') {
     } else {
         http_response_code(405);
         echo json_encode(['error' => 'Desteklenmeyen HTTP metodu']);
+    }
+} else if ($request == '/api/v1/cart') {
+    $user = authControl();
+    if ($user) {
+        require_once ('model/product.php');
+        $product = new Product();
+        $redisConn = redisConnection($redisHost, $redisPassword);
+        $id = $user['user'];
+        if ($method === "POST") {
+            $jsonData = file_get_contents('php://input');
+            $data = json_decode($jsonData, true);
+
+            $requiredFields = ['product_id', 'quantity'];
+            $missingFields = controlRequiredFields($data, $requiredFields);
+
+            if ($missingFields === true) {
+                $products = $product->read($data['product_id']);
+                if ($products) {
+                    $storedData = $redisConn->get($id);
+                    if ($storedData) {
+                        $storedDataArray = json_decode($storedData, true);
+                        if (isset($storedDataArray[$data['product_id']])) {
+                            if ($products["stock_quantity"] >= ($data['quantity'] + $storedDataArray[$data['product_id']]['quantity'])) {
+                                $storedDataArray[$data['product_id']]['quantity'] += $data['quantity'];
+                            } else {
+                                http_response_code(400);
+                                echo json_encode(['error' => 'Bu üründen stokta \'' . $products["stock_quantity"] . '\' adet bulunmaktadır, daha fazla ekleyemezsiniz!']);
+                                exit();
+                            }
+                        } else {
+                            if ($products["stock_quantity"] >= $data['quantity']) {
+                                $storedDataArray[$data['product_id']] = ['quantity' => $data['quantity']];
+                            } else {
+                                http_response_code(400);
+                                echo json_encode(['error' => 'Bu üründen stokta \'' . $products["stock_quantity"] . '\' adet bulunmaktadır, daha fazla ekleyemezsiniz!']);
+                                exit();
+                            }
+                        }
+
+                        $redisConn->setex($id, 60 * 60, json_encode($storedDataArray));
+                        listCart($redisConn, $id, $product);
+                    } else {
+                        if ($products["stock_quantity"] >= $data['quantity']) {
+                            $newData = array($data['product_id'] => array('quantity' => $data['quantity']));
+                        } else {
+                            http_response_code(400);
+                            echo json_encode(['error' => 'Bu üründen stokta \'' . $products["stock_quantity"] . '\' adet bulunmaktadır, daha fazla ekleyemezsiniz!']);
+                            exit();
+                        }
+
+                        $redisConn->setex($id, 60 * 60, json_encode($newData));
+                        listCart($redisConn, $id, $product);
+                    }
+                } else {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Böyle bir ürün yok!']);
+                }
+
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'Gerekli alanlar eksik', 'missing_fields' => $missingFields]);
+            }
+        } else if ($method == "PUT") {
+            $jsonData = file_get_contents('php://input');
+            $data = json_decode($jsonData, true);
+            $requiredFields = ['product_id', 'quantity'];
+            $missingFields = controlRequiredFields($data, $requiredFields);
+
+            if ($missingFields === true) {
+                $storedData = $redisConn->get($id);
+                if ($storedData) {
+                    $products = $product->read($data['product_id']);
+                    if ($products) {
+                        $storedDataArray = json_decode($storedData, true);
+                        if (isset($storedDataArray[$data['product_id']])) {
+                            if ($data['quantity'] == 0) {
+                                unset($storedDataArray[$data['product_id']]);
+                                $redisConn->setex($id, 60 * 60, json_encode($storedDataArray));
+                                if (count($storedDataArray) == 0) {
+                                    $redisConn->del($id);
+                                    echo json_encode([]);
+                                    exit();
+                                }
+                            } else {
+                                if ($products["stock_quantity"] >= $data['quantity']) {
+                                    $storedDataArray[$data['product_id']]['quantity'] = $data['quantity'];
+                                    $redisConn->setex($id, 60 * 60, json_encode($storedDataArray));
+                                } else {
+                                    http_response_code(400);
+                                    echo json_encode(['error' => 'Bu üründen stokta \'' . $products["stock_quantity"] . '\' adet bulunmaktadır, daha fazla ekleyemezsiniz!']);
+                                    exit();
+                                }
+                            }
+                            listCart($redisConn, $id, $product);
+                        } else {
+                            echo json_encode(['error' => 'Sepette bu ürün yok!']);
+                        }
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Böyle bir ürün yok!']);
+                    }
+                } else {
+                    echo json_encode(['message' => 'Sepetiniz boş!']);
+                }
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'Gerekli alanlar eksik', 'missing_fields' => $missingFields]);
+            }
+        } else if ($method === "GET") {
+            listCart($redisConn, $id, $product);
+        } else if ($method == "DELETE") {
+            $redisConn->del($id);
+            echo json_encode(["message" => "Sepetiniz temizlendi!"]);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Desteklenmeyen HTTP metodu']);
+        }
     }
 } else {
     header("HTTP/1.0 404 Not Found");

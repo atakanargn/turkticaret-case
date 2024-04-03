@@ -1,5 +1,5 @@
 <?php
-
+require ("../config.php");
 require ("../db.conn.php");
 
 $json_data = file_get_contents('products.json');
@@ -15,7 +15,7 @@ foreach ($data as $row) {
         // flavor_notes içermiyorsa NULL verdik, içeriyorsa da Postgresql TEXT[] yani text array tipine uygun hale getirdik
         $flavor_notes = isset($row['flavor_notes']) ? '{' . implode(",", $row['flavor_notes']) . '}' : null;
         // Insert sorgusu
-        $stmt = $pdo->prepare("INSERT INTO product (title, category_id, category_title, description, price, stock_quantity, origin, roast_level, flavor_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO products (title, category_id, category_title, description, price, stock_quantity, origin, roast_level, flavor_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         // Sorgu boşlukları dolduruldu ve çalıştırıldı
         $stmt->execute([$row['title'], $row['category_id'], $row['category_title'], $row['description'], $row['price'], $row['stock_quantity'], $row['origin'], $row['roast_level'], $flavor_notes]);
     } catch (PDOException $e) {

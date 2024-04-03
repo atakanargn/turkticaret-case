@@ -28,12 +28,12 @@ class Product
         $stmt = $this->_pdo->prepare($sql);
         $stmt->execute([$id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        $result['flavor_notes'] = json_decode($result['flavor_notes_json'], true);
-        $result['flavor_notes'] = $result['flavor_notes'][0];
-        unset($result['flavor_notes_json']);
+        if ($result) {
+            $result['flavor_notes'] = json_decode($result['flavor_notes_json'], true);
+            $result['flavor_notes'] = $result['flavor_notes'][0];
+            unset($result['flavor_notes_json']);
+        }
         return $result;
     }
-
-
 }
 ?>
