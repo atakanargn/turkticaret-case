@@ -11,11 +11,11 @@ Windows kullanıcıları için start.bat dosyasını çalıştırarak başlatabi
 [https://www.postman.com/galactic-space-878571/workspace/order-api/overview](https://www.postman.com/galactic-space-878571/workspace/order-api/overview)
 
 ## Veritabanı bilgileri
--Host : localhost 
--Port : 5432 
--Username : postgres 
--Password : postgres 
--Database : coffeedb 
+Host : localhost
+Port : 5432 
+Username : postgres 
+Password : postgres 
+Database : coffeedb 
 
 ## Redis 
 -Host : localhost 
