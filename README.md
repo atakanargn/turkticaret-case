@@ -10,23 +10,23 @@ Windows kullanıcıları için start.bat dosyasını çalıştırarak başlatabi
 ## Postman Docs
 [https://www.postman.com/galactic-space-878571/workspace/order-api/overview](https://www.postman.com/galactic-space-878571/workspace/order-api/overview)
 
-##Veritabanı bilgileri
--Host : localhost
--Port : 5432 
--Username : postgres 
--Password : postgres 
--Database : coffeedb 
+## Veritabanı bilgileri
+- Host : localhost
+- Port : 5432 
+- Username : postgres 
+- Password : postgres 
+- Database : coffeedb 
 
 ## Redis 
--Host : localhost 
--Port : 6379 
--Password : redis 
+- Host : localhost 
+- Port : 6379 
+- Password : redis 
 
 ## RabbitMQ
--Host : localhost 
--Port : 5672 
--Username : rabbitmq 
--Password : rabbitmq 
--RabbitMQ Admin Paneli : localhost:15672 
+- Host : localhost 
+- Port : 5672 
+- Username : rabbitmq 
+- Password : rabbitmq 
+- RabbitMQ Admin Paneli : localhost:15672 
 
 ### NOTLAR bölümünde yaptıklarımın özeti yer almaktadır
