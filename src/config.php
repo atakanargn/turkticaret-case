@@ -1,4 +1,5 @@
 <?php
+
 // Postgresql ayarları
 $pgHost = 'postgres';
 $pgDbname = 'coffeedb';
@@ -13,4 +14,10 @@ $redisPassword = "redis";
 $amqHost = "rabbitmq";
 $amqUser = "rabbitmq";
 $amqPassword = "rabbitmq";
+
+// JWT Config
+$JWTSecret = "c1b9a5c1-9ba6-4cac-b23c-ad41d3cd284b";
+
+require_once ('lib/JWT.php');
+require_once ("lib/func.php");
 ?>
