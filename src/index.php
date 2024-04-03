@@ -27,9 +27,6 @@ if ($request == '/api/v1/') {
                 http_response_code(500);
                 echo json_encode(['message' => 'Müşteri oluşturulamadı.', 'error' => $success], JSON_UNESCAPED_UNICODE);
             }
-        } else {
-            http_response_code(400);
-            echo json_encode(['message' => 'Gerekli alanlarda eksik var!', 'fields' => $missingFields], JSON_UNESCAPED_UNICODE);
         }
     } else {
         http_response_code(405);
@@ -108,9 +105,6 @@ if ($request == '/api/v1/') {
                 http_response_code(201);
                 echo json_encode(['success' => 'Kupon başarıyla oluşturuldu']);
             }
-        } else {
-            http_response_code(400);
-            echo json_encode(['error' => 'Gerekli alanlar eksik', 'missing_fields' => $missingFields]);
         }
     } else {
         http_response_code(405);
@@ -155,7 +149,7 @@ if ($request == '/api/v1/') {
                         }
 
                         $redisConn->setex($id, 60 * 60, json_encode($storedDataArray));
-                        listCart($redisConn, $id, $product);
+                        echo json_encode(listCart($redisConn, $id, $product));
                     } else {
                         if ($products["stock_quantity"] >= $data['quantity']) {
                             $newData = array($data['product_id'] => array('quantity' => $data['quantity']));
@@ -166,16 +160,13 @@ if ($request == '/api/v1/') {
                         }
 
                         $redisConn->setex($id, 60 * 60, json_encode($newData));
-                        listCart($redisConn, $id, $product);
+                        echo json_encode(listCart($redisConn, $id, $product));
                     }
                 } else {
                     http_response_code(400);
                     echo json_encode(['error' => 'Böyle bir ürün yok!']);
                 }
 
-            } else {
-                http_response_code(400);
-                echo json_encode(['error' => 'Gerekli alanlar eksik', 'missing_fields' => $missingFields]);
             }
         } else if ($method == "PUT") {
             $jsonData = file_get_contents('php://input');
@@ -208,7 +199,7 @@ if ($request == '/api/v1/') {
                                     exit();
                                 }
                             }
-                            listCart($redisConn, $id, $product);
+                            echo json_encode(listCart($redisConn, $id, $product));
                         } else {
                             echo json_encode(['error' => 'Sepette bu ürün yok!']);
                         }
@@ -219,15 +210,187 @@ if ($request == '/api/v1/') {
                 } else {
                     echo json_encode(['message' => 'Sepetiniz boş!']);
                 }
-            } else {
-                http_response_code(400);
-                echo json_encode(['error' => 'Gerekli alanlar eksik', 'missing_fields' => $missingFields]);
             }
         } else if ($method === "GET") {
-            listCart($redisConn, $id, $product);
+            echo json_encode(listCart($redisConn, $id, $product));
         } else if ($method == "DELETE") {
             $redisConn->del($id);
             echo json_encode(["message" => "Sepetiniz temizlendi!"]);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Desteklenmeyen HTTP metodu']);
+        }
+    }
+} else if (startsWith($request, "/api/v1/order")) {
+    $user = authControl();
+    if ($user) {
+        $user_id = $user["user"];
+        if ($method == "POST") {
+            $redisConn = redisConnection($redisHost, $redisPassword);
+
+            require_once ('model/customer.php');
+            require_once ('model/product.php');
+            require_once ('model/order.php');
+            require_once ('model/coupon.php');
+
+            $_customer = new Customer();
+            $product = new Product();
+            $order = new Order();
+            $coupon = new Coupon();
+
+            $customer = $_customer->read($user_id);
+            $cart = listCart($redisConn, $user_id, $product);
+
+            if ($cart["summary"]["product_count"] == 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Sepetiniz boş!']);
+                exit();
+            }
+
+            $data = json_decode(file_get_contents('php://input'), true);
+
+            $coupon_code = null;
+            $couponDiscountPercent = 0;
+            if (isset($data['coupon_code'])) {
+                $couponDiscount = $coupon->read($data['coupon_code']);
+                if (isset($couponDiscount['error'])) {
+                    http_response_code(400);
+                    echo json_encode(['error' => $couponDiscount['error']]);
+                    exit();
+                } else {
+                    $coupon->usageCountInc($data['coupon_code']);
+                }
+                $couponDiscountPercent = (float) $couponDiscount["discount_amount"];
+                $coupon_code = $data['coupon_code'];
+            }
+
+            $product_in_cart = $cart["cart"];
+            $isQuantityUpdateRequired = [];
+            foreach ($product_in_cart as $_product => $item) {
+                $_stock_quantity = $item["product"]["stock_quantity"];
+                $_quantity = $item["quantity"];
+                if ($_quantity > $_stock_quantity) {
+                    $isQuantityUpdateRequired[] = $item["product"];
+                }
+            }
+
+            if (count($isQuantityUpdateRequired) > 0) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => "Sepetinde stokta yeterli adette bulunmayan ürünler mevcut! Lütfen listelenen ürünlerin adetlerini güncelle!",
+                    'products' => $isQuantityUpdateRequired
+                ]);
+                exit();
+            }
+
+            // Kupon kodu yüzdesini düşüyoruz
+            // Zaten kupon kodu yoksa otomatik sıfır gelecektir
+            $couponDiscountPrice = (float) $cart["summary"]['total_price'] * ($couponDiscountPercent / 100);
+            $finalPrice = (float) $cart["summary"]['final_price'] - $couponDiscountPrice;
+
+            $isSuccess = $order->create(
+                $customer['id'],
+                $couponDiscountPercent,
+                $coupon_code,
+                $cart["summary"]["product_count"],
+                $cart["summary"]['total_price'],
+                $cart["summary"]['discount_percent'],
+                $cart["summary"]['discounted_price'],
+                $cart["summary"]['cargo_price'],
+                number_format($finalPrice, 2, '.', ''),
+                $customer['address'],
+                isset($data['note']) ? $data['note'] : null
+            );
+
+            if ($isSuccess[0] === true) {
+                $lastInsertId = $isSuccess[1];
+                foreach ($product_in_cart as $_product => $item) {
+                    $order->addItem($lastInsertId, $item["product"]["id"], $item["quantity"], (int) $item["quantity"] * $item["product"]["price"]);
+                    $product->updateQuantity($item["product"]["id"], (int) $item["product"]["stock_quantity"] - (int) $item["quantity"]);
+                }
+                $lastOrder = $order->read($lastInsertId);
+                $orderItems = $order->readItems($lastInsertId);
+                $redisConn->del($user_id);
+                /*
+                $message = (string) json_encode([
+                    'to' => $customer['email'],
+                    'summary' => [
+                        'order' => $lastOrder,
+                        'order_items' => $orderItems
+                    ]
+                ]);
+                addMailToQueue($amqHost, $amqUser, $amqPassword, $message, "mail_list");
+                */
+                http_response_code(201);
+                echo json_encode([
+                    'message' => 'Sipariş başarıyla oluşturuldu.',
+                    'summary' => [
+                        'order' => $lastOrder,
+                        'order_items' => $orderItems
+                    ]
+                ], JSON_UNESCAPED_UNICODE);
+            } else {
+                http_response_code(500);
+                echo json_encode(['message' => 'Sipariş oluşturulamadı.', 'error' => $isSuccess[1]], JSON_UNESCAPED_UNICODE);
+            }
+        } else if ($method == "GET") {
+            $urlParts = explode('/', $request);
+            require_once ('model/product.php');
+            require_once ('model/order.php');
+
+            $product = new Product();
+            $order = new Order();
+
+            $new_order = [];
+
+            if (count($urlParts) === 5) {
+                $id = $urlParts[4];
+                if ($id == "") {
+                    $_order = $order->findByCustomer($user_id);
+                    $new_order = [];
+                    foreach ($_order as $_order_ => $item) {
+                        $_orderItems = $order->readItems($item["id"]);
+                        $orderItems = [];
+                        foreach ($_orderItems as $_product2 => $item2) {
+                            $_product = $product->read($item2["product_id"]);
+                            $orderItems[] = $_product;
+                        }
+                        $new_order[] = [
+                            "order" => $item,
+                            "order_items" => $orderItems
+                        ];
+                    }
+                } else {
+                    $_order = $order->read($id);
+                    $_orderItems = $order->readItems($_order["id"]);
+                    $orderItems = [];
+                    foreach ($_orderItems as $_product2 => $item2) {
+                        $_product = $product->read($item2["product_id"]);
+                        $orderItems[] = $_product;
+                    }
+                    $new_order[] = [
+                        "order" => $_order,
+                        "order_items" => $orderItems
+                    ];
+
+                }
+            } else {
+                $_order = $order->findByCustomer($user_id);
+                $new_order = [];
+                foreach ($_order as $_order_ => $item) {
+                    $_orderItems = $order->readItems($item["id"]);
+                    $orderItems = [];
+                    foreach ($_orderItems as $_product2 => $item2) {
+                        $_product = $product->read($item2["product_id"]);
+                        $orderItems[] = $_product;
+                    }
+                    $new_order[] = [
+                        "order" => $item,
+                        "order_items" => $orderItems
+                    ];
+                }
+            }
+            echo json_encode($new_order);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Desteklenmeyen HTTP metodu']);

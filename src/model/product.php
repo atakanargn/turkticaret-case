@@ -35,5 +35,17 @@ class Product
         }
         return $result;
     }
+
+    public function updateQuantity($id, $new_quantity)
+    {
+        $sql = "UPDATE products SET stock_quantity = ? WHERE id = ?";
+        $stmt = $this->_pdo->prepare($sql);
+        try {
+            $stmt->execute([$new_quantity, $id]);
+            return true;
+        } catch (PDOException $e) {
+            return $e->getMessage();
+        }
+    }
 }
 ?>

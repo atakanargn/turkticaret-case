@@ -36,6 +36,23 @@ function redisConnection($host, $password)
     return $redisConn;
 }
 
+function addMailToQueue($amqHost, $amqUser, $amqPassword, $message, $queueName)
+{
+    $rabbitMQConn = new AMQPConnection([
+        'host' => $amqHost,
+        'port' => 5672,
+        'login' => $amqUser,
+        'password' => $amqPassword
+    ]);
+    $rabbitMQConn->connect();
+    $channel = $rabbitMQConn->channel();
+    $channel->queue_declare('mail_list', false, false, false, false);
+
+    $channel->basic_publish('', 'mail_list', AMQPMessage::create($message));
+    $channel->close();
+    $rabbitMQConn->disconnect();
+}
+
 function controlRequiredFields($data, $requiredFields)
 {
     $missingFields = [];
@@ -47,7 +64,9 @@ function controlRequiredFields($data, $requiredFields)
     if (empty($missingFields)) {
         return true;
     }
-    return $missingFields;
+    http_response_code(400);
+    echo json_encode(['message' => 'Gerekli alanlarda eksik var!', 'fields' => $missingFields], JSON_UNESCAPED_UNICODE);
+    exit();
 }
 
 function listCart($redisConn, $id, $product)
@@ -108,7 +127,7 @@ function listCart($redisConn, $id, $product)
 
     $final_price = $total_price - $discounted_price + $cargo_price;
 
-    echo json_encode([
+    return [
         "cart" => $cart,
         "summary" => [
             "product_count" => count($cart),
@@ -118,7 +137,7 @@ function listCart($redisConn, $id, $product)
             "cargo_price" => number_format($cargo_price, 2, '.', ''),
             "final_price" => number_format($final_price, 2, '.', ''),
         ]
-    ]);
+    ];
 }
 
 ?>

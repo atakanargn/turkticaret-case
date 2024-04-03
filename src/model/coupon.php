@@ -65,16 +65,32 @@ class Coupon
         }
     }
 
+    private function isCouponExpired($expiration_date)
+    {
+        $expiration_timestamp = strtotime($expiration_date);
+        $current_timestamp = time();
+        if ($expiration_timestamp < $current_timestamp) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public function read($coupon_code)
     {
         try {
             $sql = "SELECT * FROM coupons WHERE coupon_code = ?";
             $stmt = $this->_pdo->prepare($sql);
-            $coupon = $stmt->execute([$coupon_code]);
+            $stmt->execute([$coupon_code]);
+            $coupon = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$coupon) {
-                return ['error' => 'Geçersiz kupon kodu'];
+                return ['error' => 'Geçersiz kupon kodu!'];
             }
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            $expiration_date = $coupon['expiration_date'];
+            if ($this->isCouponExpired($expiration_date)) {
+                return ['error' => 'Kuponun süresi dolmuştur!'];
+            }
+            return $coupon;
         } catch (PDOException $e) {
             return $e->getMessage();
         }
