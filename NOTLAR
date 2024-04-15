@@ -29,4 +29,6 @@ Sipariş oluşturulduktan hemen sonra RabbitMQ ile kuyruğa alınan mail Python 
 sorun oluşursa tekrar denemek üzere kuyruğun sonuna atacak şekilde düşünmüştüm.
 RabbitMQ kullanamadığımdan docker içerisinde cron section'ı oluşturarak alternatif oluşturdum ve postgresql'de açtığım bir tablo ile mail kuyruklama işlemini hallettim.
 
+2 tip mail oluşturdum. Biri aktivasyon maili, diğeri de sipariş oluşturuldu maili, burada mail_template klasörü içerisindeki html dosyaları çekip gereken yerleri güncelleyerek gönderimini sağladım.
+
 Döküman dışında kendimden bir şeyler de eklemeye çalıştım.
