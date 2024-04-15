@@ -14,6 +14,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # Postgresql veritabanı export edilmek istenirse bu yorum satırı açılabilir
+      # - ./db:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       POSTGRES_USER: postgres
@@ -24,21 +26,23 @@ services:
     ports:
       - "6379:6379"
     command: redis-server --requirepass redis
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: rabbitmq
-      RABBITMQ_DEFAULT_PASS: rabbitmq
   php:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: php.Dockerfile
     volumes:
       - ./src:/var/www/html
     depends_on:
       - postgres
       - redis
-      - rabbitmq
+  cron:
+    build:
+      context: .
+      dockerfile: cron.Dockerfile
+    volumes:
+      - ./src:/var/www/html
+    command: >
+      sh -c "cd /var/www/html; while true; do php cron/mails.php; sleep 5; done"
+    depends_on:
+      - postgres
+      - redis

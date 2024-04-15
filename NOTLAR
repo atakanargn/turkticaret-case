@@ -1,6 +1,6 @@
 Proje pure php ile yazıldı gönderdiğiniz döküman içerisindeki tüm detaylara dikkat edilerek yazıldı.
 Veritabanı : Postgresql
-Kullanılan teknolojiler : Docker, Redis, RabbitMQ (sadece Docker'a eklendi)
+Kullanılan teknolojiler : Docker, Redis
 
 Kupon Kodu Kontrol Servisi:
 - İstenilen algoritmaya göre Coupon kodu oluşturma ve kontrol servisi eklendi.
@@ -21,15 +21,12 @@ Initial değerler:
 - Sonrasında initial klasörü init.php tarafından otomatik olarak silinir.
 
 Sepet ve siparişleri atayabilmek için çok basit bir Customer Login/Register oluşturuldu.
+Register işleminden sonra gelen e-postadaki linke tıklayarak aktivasyon yapmak gerekiyor.
 Ürün listeleme, sepet işlemleri ve sipariş işlemleri için JWT authentication yöntemi kullanıldı.
 
-RabbitMQ ekledim ancak kullanamadım, test case için son gün olduğundan üzerinde durmadım. 
-Mail gönderme işlemi de yetişmediğinden ekleyemedim,
-sipariş oluşturulduktan hemen sonra RabbitMQ ile kuyruğa alınan mail Python ile Consume edilecek ve durum başarılı ise kuyruktan silinecek,
+RabbitMQ eklemiştim ancak kullanamadım.
+Sipariş oluşturulduktan hemen sonra RabbitMQ ile kuyruğa alınan mail Python ile Consume edilecek ve durum başarılı ise kuyruktan silinecekti,
 sorun oluşursa tekrar denemek üzere kuyruğun sonuna atacak şekilde düşünmüştüm.
-
-E-postayı Çarşamba görmüşsüm birde elde olmayan sebeplerden son güne kaldı, repoyu oluşturduğum saat başladığım saattir.
+RabbitMQ kullanamadığımdan docker içerisinde cron section'ı oluşturarak alternatif oluşturdum ve postgresql'de açtığım bir tablo ile mail kuyruklama işlemini hallettim.
 
 Döküman dışında kendimden bir şeyler de eklemeye çalıştım.
-
-10:05 itibari ile de bırakıyorum.

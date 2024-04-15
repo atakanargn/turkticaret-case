@@ -22,11 +22,4 @@ Windows kullanıcıları için start.bat dosyasını çalıştırarak başlatabi
 -Port : 6379 
 -Password : redis 
 
-## RabbitMQ
--Host : localhost 
--Port : 5672 
--Username : rabbitmq 
--Password : rabbitmq 
--RabbitMQ Admin Paneli : localhost:15672 
-
 ### NOTLAR bölümünde yaptıklarımın özeti yer almaktadır

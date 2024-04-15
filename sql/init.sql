@@ -20,7 +20,8 @@ CREATE TABLE customers (
     email VARCHAR(100) UNIQUE,
     password VARCHAR(100),
     phone_number VARCHAR(32) UNIQUE,
-    address TEXT
+    address TEXT,
+    status TEXT
 );
 
 CREATE TABLE coupons (
@@ -59,4 +60,13 @@ CREATE TABLE order_items (
     product_id INTEGER REFERENCES products(id),
     quantity INTEGER,
     price NUMERIC(10, 2)
+);
+
+CREATE TABLE mail_list (
+    id SERIAL PRIMARY KEY,
+    mail_to VARCHAR(255),
+    fullname VARCHAR(255),
+    subject TEXT,
+    content TEXT,
+    success INTEGER
 );

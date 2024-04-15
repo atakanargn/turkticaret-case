@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Siparişiniz Alındı!</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+
+      .container {
+        width: 600px;
+        margin: 20px auto;
+        background-color: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      p {
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      .order-details {
+        margin-top: 20px;
+        border-top: 1px solid #ddd;
+        padding-top: 20px;
+      }
+
+      .order-details h3 {
+        margin-bottom: 10px;
+      }
+
+      .order-item {
+        margin-bottom: 10px;
+      }
+
+      .order-item span {
+        display: inline-block;
+        width: 150px;
+        font-weight: bold;
+      }
+
+      .order-item p {
+        margin: 0;
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      .order-details table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .order-details th,
+      .order-details td {
+        padding: 8px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+
+      .order-details th {
+        background-color: #f0f0f0;
+        font-weight: bold;
+      }
+
+      .order-details tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+
+      .order-details .order-item:last-child {
+        font-weight: bold;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Siparişiniz Alındı!</h1>
+
+      <p>Merhaba {{isim}},</p>
+
+      <p>
+        Siparişiniz başarılı bir şekilde tamamlanmıştır. Detayları aşağıda
+        bulabilirsiniz:
+      </p>
+
+      <div class="order-details">
+        <h3>Sipariş Detayları</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Ürün Adı</th>
+              <th>Miktar</th>
+              <th>Fiyat</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{item_list}}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2">Toplam Tutar:</td>
+              <td>{{toplam_tutar}} TL</td>
+            </tr>
+            <tr>
+              <td colspan="2">Kupon Indirim Oranı:</td>
+              <td>% {{kupon_indirim_tutari}}</td>
+            </tr>
+            <tr>
+              <td colspan="2">Sepette Indirim Oranı:</td>
+              <td>% {{sepette_indirim_tutari}}</td>
+            </tr>
+            <tr>
+              <td colspan="2">Kargo Ücreti:</td>
+              <td>{{kargo_ucreti}} TL</td>
+            </tr>
+            <tr>
+              <td colspan="2">Ödenecek Tutar:</td>
+              <td>{{odenecek_tutar}} TL</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <p>Siparişiniz en kısa sürede kargoya teslim edilecektir.</p>
+
+      <p>
+        Sorularınız veya endişeleriniz varsa, lütfen bizimle {{destek_eposta}}
+        adresinden iletişime geçmekten çekinmeyin.
+      </p>
+
+      <p>Saygılarımızla,</p>
+      <p>TürkTicaret Coffee</p>
+    </div>
+  </body>
+</html>

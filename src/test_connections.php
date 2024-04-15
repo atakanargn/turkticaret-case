@@ -18,17 +18,5 @@ if (!$redisConn) {
     die("Redis connection failed");
 }
 
-// RabbitMQ connection
-$rabbitMQConn = new AMQPConnection([
-    'host' => $amqHost,
-    'port' => 5672,
-    'login' => $amqUser,
-    'password' => $amqPassword
-]);
-$rabbitMQConn->connect();
-if (!$rabbitMQConn->isConnected()) {
-    die("RabbitMQ connection failed");
-}
-
 echo "All connections are successful!";
 ?>

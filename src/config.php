@@ -10,11 +10,6 @@ $pgPassword = 'postgres';
 $redisHost = "redis";
 $redisPassword = "redis";
 
-// RabbitMQ ayarları
-$amqHost = "rabbitmq";
-$amqUser = "rabbitmq";
-$amqPassword = "rabbitmq";
-
 // JWT Config
 $JWTSecret = "c1b9a5c1-9ba6-4cac-b23c-ad41d3cd284b";
 

@@ -36,23 +36,6 @@ function redisConnection($host, $password)
     return $redisConn;
 }
 
-function addMailToQueue($amqHost, $amqUser, $amqPassword, $message, $queueName)
-{
-    $rabbitMQConn = new AMQPConnection([
-        'host' => $amqHost,
-        'port' => 5672,
-        'login' => $amqUser,
-        'password' => $amqPassword
-    ]);
-    $rabbitMQConn->connect();
-    $channel = $rabbitMQConn->channel();
-    $channel->queue_declare('mail_list', false, false, false, false);
-
-    $channel->basic_publish('', 'mail_list', AMQPMessage::create($message));
-    $channel->close();
-    $rabbitMQConn->disconnect();
-}
-
 function controlRequiredFields($data, $requiredFields)
 {
     $missingFields = [];

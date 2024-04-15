@@ -1,7 +1,9 @@
 <?php
+error_reporting(0);
 $request = $_SERVER['REQUEST_URI'];
 $method = $_SERVER['REQUEST_METHOD'];
-$controllerDir = '/controller/';
+$QUERY_PARAMS = array();
+parse_str(parse_url($request, PHP_URL_QUERY), $QUERY_PARAMS);
 
 header('Content-Type: application/json');
 
@@ -9,6 +11,22 @@ require_once ("config.php");
 
 if ($request == '/api/v1/') {
     echo json_encode(["message" => "TurkTicaret.net Test Case"]);
+} else if (startsWith($request, '/api/v1/activation')) {
+    if (isset($QUERY_PARAMS["code"])) {
+        require_once ('model/customer.php');
+        $customer = new Customer();
+        $process = $customer->activation($QUERY_PARAMS["code"]);
+        if ($process === true) {
+            http_response_code(200);
+            echo json_encode(['message' => 'Aktivasyon başarılı.'], JSON_UNESCAPED_UNICODE);
+        } else {
+            http_response_code(400);
+            echo json_encode(['message' => 'Aktivasyon tamamlanamadı!', 'error' => $process], JSON_UNESCAPED_UNICODE);
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(['message' => 'Aktivasyon tamamlanamadı!', 'error' => 'Token geçersiz!'], JSON_UNESCAPED_UNICODE);
+    }
 } else if ($request == '/api/v1/register') {
     if ($method === "POST") {
         require_once ('model/customer.php');
@@ -24,7 +42,7 @@ if ($request == '/api/v1/') {
                 http_response_code(201);
                 echo json_encode(['message' => 'Müşteri başarıyla oluşturuldu.'], JSON_UNESCAPED_UNICODE);
             } else {
-                http_response_code(500);
+                http_response_code(400);
                 echo json_encode(['message' => 'Müşteri oluşturulamadı.', 'error' => $success], JSON_UNESCAPED_UNICODE);
             }
         }
@@ -50,6 +68,13 @@ if ($request == '/api/v1/') {
             echo json_encode(['error' => 'Kullanıcı bulunamadı']);
             exit;
         }
+
+        if ($customerData['status'] !== "0") {
+            http_response_code(401);
+            echo json_encode(['error' => 'Kullanıcı hesabı aktifleştirilmemiş, lütfen e-postanızı kontrol edin!']);
+            exit();
+        }
+
         if (password_verify($password, $customerData['password'])) {
             http_response_code(200);
             $expiration = date('Y-m-d H:i:s', time() + 60 * 60 * 24);
@@ -304,23 +329,43 @@ if ($request == '/api/v1/') {
 
             if ($isSuccess[0] === true) {
                 $lastInsertId = $isSuccess[1];
+                $tableContent = "";
                 foreach ($product_in_cart as $_product => $item) {
-                    $order->addItem($lastInsertId, $item["product"]["id"], $item["quantity"], (int) $item["quantity"] * $item["product"]["price"]);
+                    $item_price = (int) $item["quantity"] * $item["product"]["price"];
+                    $tableContent = $tableContent . '<tr>
+                        <td>' . $item["product"]["title"] . '</td>
+                        <td>' . $item["quantity"] . '</td>
+                        <td>' . number_format($item_price, 2, '.', '') . ' TL</td>
+                    </tr>';
+                    $order->addItem($lastInsertId, $item["product"]["id"], $item["quantity"], $item_price);
                     $product->updateQuantity($item["product"]["id"], (int) $item["product"]["stock_quantity"] - (int) $item["quantity"]);
                 }
                 $lastOrder = $order->read($lastInsertId);
                 $orderItems = $order->readItems($lastInsertId);
                 $redisConn->del($user_id);
-                /*
-                $message = (string) json_encode([
-                    'to' => $customer['email'],
-                    'summary' => [
-                        'order' => $lastOrder,
-                        'order_items' => $orderItems
-                    ]
-                ]);
-                addMailToQueue($amqHost, $amqUser, $amqPassword, $message, "mail_list");
-                */
+
+                $content = file_get_contents("mail_template/order.html");
+                $fullname = $customer["firstname"] . " " . $customer["last_name"];
+                $render_list = array(
+                    array("{{isim}}", $fullname),
+                    array("{{item_list}}", $tableContent),
+                    array("{{toplam_tutar}}", number_format($cart["summary"]['total_price'], 2, '.', '')),
+                    array("{{kupon_indirim_tutari}}", number_format($couponDiscountPercent, 2, '.', '')),
+                    array("{{sepette_indirim_tutari}}", number_format($cart["summary"]['discount_percent'], 2, '.', '')),
+                    array("{{odenecek_tutar}}", number_format($finalPrice, 2, '.', '')),
+                    array("{{kargo_ucreti}}", number_format($cart["summary"]['cargo_price'], 2, '.', '')),
+                    array("{{destek_eposta}}", "argin.atakan@gmail.com"),
+                );
+
+                foreach ($render_list as $alt_liste) {
+                    $content = str_replace($alt_liste[0], $alt_liste[1], $content);
+                }
+                ;
+
+                $sql = "INSERT INTO mail_list (mail_to, fullname, subject, content, success) VALUES (?, ?, ?, ?, 0)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$customer["email"], $fullname, "TT Coffee Sipariş", $content]);
+
                 http_response_code(201);
                 echo json_encode([
                     'message' => 'Sipariş başarıyla oluşturuldu.',
